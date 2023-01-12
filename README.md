@@ -1,4 +1,4 @@
-# distribution_plan
+# mbx-be-auth
 
 ## Local Development
 
