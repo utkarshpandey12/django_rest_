@@ -4,5 +4,5 @@ from . import views
 
 app_name = "core"
 urlpatterns = [
-    path("", view=views.RootView.as_view(), name="root_view"),
+    path("otp/send", view=views.SendOtp.as_view(), name="send_otp_view"),
 ]
