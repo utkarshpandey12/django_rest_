@@ -1,7 +1,11 @@
 import boto3
 import botocore
 
-from config.settings.local import AWS_ACCESS_KEY, AWS_SECRET_KEY
+from config.settings.base import (
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
+    AWS_SESSION_TOKEN,
+)
 
 
 class SnsWrapper:
@@ -13,8 +17,9 @@ class SnsWrapper:
         """
         self.sns_resource = boto3.client(
             "sns",
-            aws_access_key_id=AWS_ACCESS_KEY,
-            aws_secret_access_key=AWS_SECRET_KEY,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            aws_session_token=AWS_SESSION_TOKEN,
             region_name="ap-south-1",
         )
 

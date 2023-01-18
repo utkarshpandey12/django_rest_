@@ -256,3 +256,12 @@ SPECTACULAR_SETTINGS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+
+# AWS Credential for authenticating aws boto3 client
+# https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+
+AWS_SESSION_TOKEN = env("AWS_SESSION_TOKEN")
