@@ -23,6 +23,17 @@ CACHES = {
     }
 }
 
+
+AWS_ACCESS_KEY = env(
+    "AWS_ACCESS_KEY",
+    default="ASIA6GGBJZO7VNSBZYT5",
+)
+
+AWS_SECRET_KEY = env(
+    "AWS_SECRET_KEY",
+    default="pS1coGfs0ngTH5x0kkCkNCTQ6Cqw+eefT7VB8Jt8",
+)
+
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
