@@ -47,6 +47,8 @@ class SetMpin(APIView):
             raise APIException("Mpin already set.")
 
         user.set_mpin_hash(validated_data["mpin"])
+        user.is_mpin_set = True
+        user.save()
         access_token = create_access_token(user_id, user.phone_number)
         refresh_token = create_refresh_token(user_id)
 
