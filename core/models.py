@@ -3,7 +3,6 @@
 # Create your models here.
 
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 
 
@@ -35,7 +34,7 @@ class Otp(models.Model):
         return f"{self.phone_number}"
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
+class MbxUser(models.Model):
     country_code = models.CharField(
         max_length=5,
         blank=True,
@@ -52,7 +51,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=25, blank=True)
     middle_name = models.CharField(max_length=25, blank=True)
     last_name = models.CharField(max_length=25, blank=True)
-    mpin_set = models.BooleanField(
+    is_mpin_set = models.BooleanField(
         default=False, verbose_name="is_Mpin_Set", help_text="is Mpin set"
     )
     mpin = models.CharField(
@@ -61,21 +60,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         verbose_name="User Mpin",
         help_text="Users secured code stored as hash",
     )
-    kyc_verified = models.BooleanField(
-        default=False, verbose_name="is_Kyc_Verified", help_text="is Mpin set"
+    is_kyc_verified = models.BooleanField(
+        default=False, verbose_name="is_Kyc_Verified", help_text="is kyc completed"
     )
-
-    (
-        username,
-        date_joined,
-        last_login,
-        is_superuser,
-        is_staff,
-        user_permissions,
-        groups,
-    ) = [None] * 7
-
-    USERNAME_FIELD = "phone_number"
+    is_active = models.BooleanField(
+        default=False,
+        verbose_name="is_User_Active",
+        help_text="is sser currently active",
+    )
 
     def __str__(self):
         return f"{self.phone_number}"
@@ -94,7 +86,7 @@ class Tokens(models.Model):
         max_length=10, choices=token_type_choices, default="REFRESH"
     )
     user_id = models.ForeignKey(
-        CustomUser,
+        MbxUser,
         related_name="user_token",
         verbose_name="User Token",
         on_delete=models.CASCADE,

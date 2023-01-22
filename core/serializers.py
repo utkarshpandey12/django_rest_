@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from .models import CustomUser, Otp
+from .models import MbxUser, Otp
 from .send_otp_sns import SnsWrapper
+from .token import create_temp_token
 
 
 class OtpSerializer(ModelSerializer):
@@ -141,12 +142,40 @@ class OtpVerifySerializer(ModelSerializer):
         otp_verification_result.count = 0
         otp_verification_result.save()
 
-        existing_user, is_created = CustomUser.objects.get_or_create(
+        user, is_created = MbxUser.objects.get_or_create(
             country_code=validated_data["country_code"],
             phone_number=validated_data["phone_number"],
         )
 
+        temp_token = create_temp_token(user.id, user.is_mpin_set)
+
         return {
             "message": "success",
-            "data": {"temp_token": "abcdefghijklo", "is_new_user": is_created},
+            "data": {"temp_token": temp_token, "is_new_user": is_created},
+        }
+
+
+class MpinSerializer(ModelSerializer):
+    class Meta:
+        model = MbxUser
+        fields = ["mpin"]
+        extra_kwargs = {
+            "mpin": {"write_only": True},
+        }
+
+    def validate(self, validate_data):
+        mpin = validate_data.get("mpin")
+
+        if len(str(mpin)) < 4 or len(str(mpin)) > 4:
+            raise serializers.ValidationError(
+                {"error": "Enter a valid 4 digit number as mpin"}
+            )
+
+        try:
+            int(mpin)
+        except Exception:
+            raise serializers.ValidationError({"error": "only numbers allowed"})
+
+        return {
+            "mpin": mpin,
         }

@@ -1,6 +1,7 @@
-from datetime import datetime
+import datetime
 
 import jwt
+from rest_framework import exceptions
 
 
 def create_temp_token(user_id, is_mpin_set):
@@ -14,6 +15,14 @@ def create_temp_token(user_id, is_mpin_set):
         "temp_secret",
         algorithm="HS256",
     )
+
+
+def decode_temp_token(token):
+    try:
+        payload = jwt.decode(token, "temp_secret", algorithms="HS256")
+        return payload["user_id"]
+    except Exception:
+        raise exceptions.AuthenticationFailed("unauthenticated")
 
 
 def create_access_token(user_id, phone_number):
