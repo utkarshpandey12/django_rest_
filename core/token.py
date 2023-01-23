@@ -38,6 +38,14 @@ def create_access_token(user_id, phone_number):
     )
 
 
+def decode_access_token(token):
+    try:
+        payload = jwt.decode(token, "access_token_secret", algorithms="HS256")
+        return payload["user_id"]
+    except Exception:
+        raise exceptions.AuthenticationFailed("unauthenticated")
+
+
 def create_refresh_token(user_id):
 
     return jwt.encode(
@@ -48,3 +56,11 @@ def create_refresh_token(user_id):
         "refresh_token_secret",
         algorithm="HS256",
     )
+
+
+def decode_refresh_token(token):
+    try:
+        payload = jwt.decode(token, "refresh_token_secret", algorithms="HS256")
+        return (payload["user_id"], payload["exp"])
+    except Exception:
+        raise exceptions.AuthenticationFailed("unauthenticated")
