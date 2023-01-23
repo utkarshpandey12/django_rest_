@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytz
+from django.contrib.auth.hashers import check_password
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
 from rest_framework.response import Response
@@ -75,10 +76,54 @@ class SetMpin(APIView):
         token_obj.save()
 
         response = Response()
-
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
         response.data = {
             "message": "success",
             "data": {"access_token": access_token, "refresh_token": refresh_token},
         }
 
+        return response
+
+
+class VerifyMpin(APIView):
+    def post(self, request):
+
+        auth_headers = get_authorization_header(request).split()
+        if not auth_headers:
+            raise AuthenticationFailed("unauthenticated")
+
+        if (
+            not request.COOKIES.get("refresh_token")
+            or auth_headers[0].decode("utf-8") == "temp_token"
+        ):
+            raise AuthenticationFailed("Temp token found")
+
+        user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
+
+        serializer = MpinSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        user_obj = MbxUser.objects.get(pk=user_id)
+
+        if not check_password(validated_data["mpin"], user_obj.mpin):
+            raise AuthenticationFailed("Invalid Mpin")
+
+        access_token = create_access_token(user_id, user_obj.phone_number)
+        refresh_token = create_refresh_token(user_id)
+
+        token_obj = Tokens.objects.get(user_id=user_obj.id)
+        token_obj.token = refresh_token
+        token_obj.expiry = datetime.utcfromtimestamp(
+            decode_refresh_token(refresh_token)[1]
+        ).replace(tzinfo=pytz.utc)
+        token_obj.save()
+
+        response = Response()
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
+
+        response.data = {
+            "message": "success",
+            "data": {"access_token": access_token, "refresh_token": refresh_token},
+        }
         return response
