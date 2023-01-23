@@ -37,12 +37,10 @@ class VerifyOtp(APIView):
 
 class SetMpin(APIView):
     def post(self, request):
-        auth_headers = get_authorization_header(request).split()
+        token = get_authorization_header(request).decode("utf-8")
 
-        if not auth_headers or len(auth_headers) != 2:
+        if not token:
             raise AuthenticationFailed("unauthenticated")
-
-        token = auth_headers[1].decode("utf-8")
 
         user_id = decode_temp_token(token)
 
@@ -87,16 +85,13 @@ class SetMpin(APIView):
 
 class VerifyMpin(APIView):
     def post(self, request):
+        token = get_authorization_header(request).decode("utf-8")
 
-        auth_headers = get_authorization_header(request).split()
-        if not auth_headers:
+        if token and decode_temp_token(token):
+            raise AuthenticationFailed("unauthenticated temp token found.")
+
+        if not request.COOKIES.get("refresh_token"):
             raise AuthenticationFailed("unauthenticated")
-
-        if (
-            not request.COOKIES.get("refresh_token")
-            or auth_headers[0].decode("utf-8") == "temp_token"
-        ):
-            raise AuthenticationFailed("Temp token found")
 
         user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
 
@@ -117,6 +112,7 @@ class VerifyMpin(APIView):
         token_obj.expiry = datetime.utcfromtimestamp(
             decode_refresh_token(refresh_token)[1]
         ).replace(tzinfo=pytz.utc)
+
         token_obj.save()
 
         response = Response()
