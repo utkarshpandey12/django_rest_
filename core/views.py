@@ -39,7 +39,10 @@ class SetMpin(APIView):
         if not token:
             raise AuthenticationFailed("unauthenticated")
 
-        user_id = decode_temp_token(token)
+        (user_id, is_mpin_set) = decode_temp_token(token)
+
+        if not user_id or not is_mpin_set:
+            raise AuthenticationFailed("unauthenticated")
 
         serializer = MpinSerializer(data=request.data)
 
@@ -72,19 +75,21 @@ class VerifyMpin(APIView):
     def post(self, request):
         token = get_authorization_header(request).decode("utf-8")
 
-        if (
-            token
-            and decode_temp_token(token)
-            and not request.COOKIES.get("refresh_token")
-        ):
-            raise AuthenticationFailed("valid temp token found. set mpin?")
-
-        if not request.COOKIES.get("refresh_token"):
+        if not request.COOKIES.get("refresh_token") and not token:
             raise AuthenticationFailed("unauthenticated")
 
-        (user_id, expiry_time) = decode_refresh_token(
-            request.COOKIES.get("refresh_token")
-        )
+        if request.COOKIES.get("refresh_token"):
+            user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
+
+        if not request.COOKIES.get("refresh_token") and token:
+            (user_id, is_mpin_set) = decode_temp_token(token)
+            if (
+                token
+                and user_id
+                and not request.COOKIES.get("refresh_token")
+                and not is_mpin_set
+            ):
+                raise AuthenticationFailed("unauthenticated")
 
         serializer = MpinSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

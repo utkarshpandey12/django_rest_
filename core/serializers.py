@@ -151,7 +151,7 @@ class OtpVerifySerializer(ModelSerializer):
 
         return {
             "message": "success",
-            "data": {"temp_token": temp_token, "is_new_user": is_created},
+            "data": {"temp_token": temp_token, "is_new_user": user.is_mpin_set},
         }
 
 

@@ -22,9 +22,9 @@ def create_temp_token(user_id, is_mpin_set):
 def decode_temp_token(token):
     try:
         payload = jwt.decode(token, "temp_secret", algorithms="HS256")
-        return payload["user_id"]
+        return (payload["user_id"], payload["mpin_set"])
     except Exception:
-        raise exceptions.AuthenticationFailed("unauthenticated")
+        return (None, None)
 
 
 def create_access_token(user_id, phone_number):
