@@ -8,4 +8,5 @@ urlpatterns = [
     path("otp/verify", view=views.VerifyOtp.as_view(), name="verify_otp_view"),
     path("mpin/set", view=views.SetMpin.as_view(), name="set_mpin_view"),
     path("mpin/verify", view=views.VerifyMpin.as_view(), name="verify_mpin_view"),
+    path("token/refresh", view=views.RefreshToken.as_view(), name="refresh_token_view"),
 ]

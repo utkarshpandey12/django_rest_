@@ -123,3 +123,34 @@ class VerifyMpin(APIView):
             "data": {"access_token": access_token, "refresh_token": refresh_token},
         }
         return response
+
+
+class RefreshToken(APIView):
+    def post(self, request):
+
+        if not request.COOKIES.get("refresh_token"):
+            raise AuthenticationFailed("unauthenticated")
+
+        refresh_token = request.COOKIES.get("refresh_token")
+        user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
+
+        token_obj = Tokens.objects.get(user_id=user_id, token=refresh_token)
+
+        if not token_obj:
+            raise AuthenticationFailed("unauthenticated")
+
+        access_token = create_access_token(user_id, token_obj.user_id.phone_number)
+
+        refresh_token = create_refresh_token(user_id)
+        token_obj.token = refresh_token
+        token_obj.save()
+
+        response = Response()
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
+
+        response.data = {
+            "message": "success",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        }
+        return response
