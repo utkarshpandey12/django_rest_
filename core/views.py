@@ -72,8 +72,12 @@ class VerifyMpin(APIView):
     def post(self, request):
         token = get_authorization_header(request).decode("utf-8")
 
-        if token and decode_temp_token(token):
-            raise AuthenticationFailed("unauthenticated temp token found.")
+        if (
+            token
+            and decode_temp_token(token)
+            and not request.COOKIES.get("refresh_token")
+        ):
+            raise AuthenticationFailed("valid temp token found. set mpin?")
 
         if not request.COOKIES.get("refresh_token"):
             raise AuthenticationFailed("unauthenticated")
