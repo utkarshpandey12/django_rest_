@@ -3,6 +3,8 @@ import datetime
 import jwt
 from rest_framework import exceptions
 
+from .models import Tokens
+
 
 def create_temp_token(user_id, is_mpin_set):
 
@@ -46,16 +48,37 @@ def decode_access_token(token):
         raise exceptions.AuthenticationFailed("unauthenticated")
 
 
-def create_refresh_token(user_id):
-
-    return jwt.encode(
+def create_refresh_token(**kwargs):
+    expiry_time = datetime.datetime.utcnow() + datetime.timedelta(days=3)
+    refresh_token = jwt.encode(
         {
-            "user_id": user_id,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=3),
+            "user_id": [
+                kwargs["user"].id
+                if kwargs["method"] == "create_new"
+                else kwargs["user"]
+            ][0],
+            "exp": expiry_time,
         },
         "refresh_token_secret",
         algorithm="HS256",
     )
+
+    if kwargs["method"] == "create_new":
+        token_obj = Tokens(
+            user_id=kwargs["user"],
+            token_type="REFRESH",
+            token=refresh_token,
+            expiry=expiry_time,
+        )
+        token_obj.save()
+
+    else:
+        token_obj = Tokens.objects.get(user_id=kwargs["user"])
+        token_obj.token = refresh_token
+        token_obj.expiry = expiry_time
+        token_obj.save()
+
+    return refresh_token
 
 
 def decode_refresh_token(token):

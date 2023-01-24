@@ -1,6 +1,3 @@
-from datetime import datetime
-
-import pytz
 from django.contrib.auth.hashers import check_password
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
@@ -59,19 +56,7 @@ class SetMpin(APIView):
         user.save()
 
         access_token = create_access_token(user_id, user.phone_number)
-        refresh_token = create_refresh_token(user_id)
-
-        refresh_token_expiry = decode_refresh_token(refresh_token)[1]
-
-        token_obj = Tokens(
-            user_id=user,
-            token_type="REFRESH",
-            token=refresh_token,
-            expiry=datetime.utcfromtimestamp(refresh_token_expiry).replace(
-                tzinfo=pytz.utc
-            ),
-        )
-        token_obj.save()
+        refresh_token = create_refresh_token(user=user, method="create_new")
 
         response = Response()
         response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
@@ -93,7 +78,9 @@ class VerifyMpin(APIView):
         if not request.COOKIES.get("refresh_token"):
             raise AuthenticationFailed("unauthenticated")
 
-        user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
+        (user_id, expiry_time) = decode_refresh_token(
+            request.COOKIES.get("refresh_token")
+        )
 
         serializer = MpinSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -105,15 +92,7 @@ class VerifyMpin(APIView):
             raise AuthenticationFailed("Invalid Mpin")
 
         access_token = create_access_token(user_id, user_obj.phone_number)
-        refresh_token = create_refresh_token(user_id)
-
-        token_obj = Tokens.objects.get(user_id=user_obj.id)
-        token_obj.token = refresh_token
-        token_obj.expiry = datetime.utcfromtimestamp(
-            decode_refresh_token(refresh_token)[1]
-        ).replace(tzinfo=pytz.utc)
-
-        token_obj.save()
+        refresh_token = create_refresh_token(user=user_id, method="update_existing")
 
         response = Response()
         response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
@@ -132,7 +111,9 @@ class RefreshToken(APIView):
             raise AuthenticationFailed("unauthenticated")
 
         refresh_token = request.COOKIES.get("refresh_token")
-        user_id = decode_refresh_token(request.COOKIES.get("refresh_token"))[0]
+        (user_id, expiry_time) = decode_refresh_token(
+            request.COOKIES.get("refresh_token")
+        )
 
         token_obj = Tokens.objects.get(user_id=user_id, token=refresh_token)
 
@@ -141,9 +122,7 @@ class RefreshToken(APIView):
 
         access_token = create_access_token(user_id, token_obj.user_id.phone_number)
 
-        refresh_token = create_refresh_token(user_id)
-        token_obj.token = refresh_token
-        token_obj.save()
+        refresh_token = create_refresh_token(user=user_id, method="update_existing")
 
         response = Response()
         response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
