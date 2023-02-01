@@ -43,12 +43,12 @@ class SetMpin(APIView):
         token = get_authorization_header(request).decode("utf-8")
 
         if not token:
-            raise AuthenticationFailed("unauthenticated")
+            raise AuthenticationFailed("unauthenticated token not found")
 
         (user_id, is_mpin_set) = decode_temp_token(token)
 
-        if not user_id or not is_mpin_set:
-            raise AuthenticationFailed("unauthenticated")
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
 
         serializer = MpinSerializer(data=request.data)
 
