@@ -1,11 +1,17 @@
 from django.contrib.auth.hashers import check_password
+from rest_framework import status
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MbxUser, Tokens
-from .serializers import MpinSerializer, OtpSerializer, OtpVerifySerializer
+from .serializers import (
+    MpinSerializer,
+    OtpSerializer,
+    OtpVerifySerializer,
+    ReferralVerifySerializer,
+)
 from .token import (
     create_access_token,
     create_refresh_token,
@@ -146,5 +152,44 @@ class RefreshToken(APIView):
             "message": "success",
             "access_token": access_token,
             "refresh_token": refresh_token,
+        }
+        return response
+
+
+class VerifyReferralCode(APIView):
+    def post(self, request):
+        token = get_authorization_header(request).decode("utf-8")
+
+        if not token:
+            raise AuthenticationFailed("unauthenticated token not found")
+
+        (user_id, is_mpin_set) = decode_temp_token(token)
+
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
+
+        current_user = MbxUser.objects.get(pk=user_id)
+
+        serializer = ReferralVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_referral = serializer.validated_data["referral_code"]
+
+        user_with_matching_referral = MbxUser.objects.get(
+            referral_code=validated_referral
+        )
+        if not user_with_matching_referral:
+            return Response(
+                {"Error": "Invalid referral code"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        current_user.refered_by_user_id = user_with_matching_referral.id
+        current_user.save()
+
+        response = Response()
+        response.data = {
+            "message": "success",
+            "current_user": current_user.id,
+            "referred_by": user_with_matching_referral.id,
+            "referral_code": validated_referral,
         }
         return response

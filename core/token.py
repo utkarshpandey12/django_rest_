@@ -68,14 +68,14 @@ def create_refresh_token(**kwargs):
             user_id=kwargs["user"],
             token_type="REFRESH",
             token=refresh_token,
-            expiry=expiry_time,
+            expires_at=expiry_time,
         )
         token_obj.save()
 
     else:
         token_obj = Tokens.objects.get(user_id=kwargs["user"])
         token_obj.token = refresh_token
-        token_obj.expiry = expiry_time
+        token_obj.expires_at = expiry_time
         token_obj.save()
 
     return refresh_token

@@ -10,4 +10,9 @@ urlpatterns = [
     path("mpin/set", view=views.SetMpin.as_view(), name="set_mpin_view"),
     path("mpin/verify", view=views.VerifyMpin.as_view(), name="verify_mpin_view"),
     path("token/refresh", view=views.RefreshToken.as_view(), name="refresh_token_view"),
+    path(
+        "referral/verify",
+        view=views.VerifyReferralCode.as_view(),
+        name="referral_code_view",
+    ),
 ]
