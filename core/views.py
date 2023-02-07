@@ -18,6 +18,7 @@ from .serializers import (
 from .token import (
     create_access_token,
     create_refresh_token,
+    decode_access_token,
     decode_refresh_token,
     decode_temp_token,
 )
@@ -161,12 +162,16 @@ class RefreshToken(APIView):
 
 class VerifyReferralCode(APIView):
     def post(self, request):
+
+        if not request.COOKIES.get("refresh_token"):
+            raise AuthenticationFailed("unauthenticated, refresh token not found!")
+
         token = get_authorization_header(request).decode("utf-8")
 
         if not token:
-            raise AuthenticationFailed("unauthenticated token not found")
+            raise AuthenticationFailed("unauthenticated access token not found")
 
-        (user_id, is_mpin_set) = decode_temp_token(token)
+        user_id = decode_access_token(token)
 
         if user_id is None:
             raise AuthenticationFailed("unauthenticated invalid token")
@@ -208,17 +213,20 @@ class MbxUserUpdateView(GenericAPIView, UpdateModelMixin):
     serializer_class = MbxUserProfessionUpdateSerializer
 
     def get_object(self):
-        serializer = self.serializer_class(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
+
+        if not self.request.COOKIES.get("refresh_token"):
+            raise AuthenticationFailed("unauthenticated, refresh token not found!")
 
         token = get_authorization_header(self.request).decode("utf-8")
         if not token:
-            raise AuthenticationFailed("unauthenticated token not found")
+            raise AuthenticationFailed("unauthenticated access token not found")
 
-        (user_id, is_mpin_set) = decode_temp_token(token)
-
+        user_id = decode_access_token(token)
         if user_id is None:
             raise AuthenticationFailed("unauthenticated invalid token")
+
+        serializer = self.serializer_class(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
 
         return MbxUser.objects.get(pk=user_id)
 
