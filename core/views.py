@@ -1,11 +1,20 @@
 from django.contrib.auth.hashers import check_password
+from rest_framework import status
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MbxUser, Tokens
-from .serializers import MpinSerializer, OtpSerializer, OtpVerifySerializer
+from .serializers import (
+    MbxUserProfessionUpdateSerializer,
+    MpinSerializer,
+    OtpSerializer,
+    OtpVerifySerializer,
+    ReferralVerifySerializer,
+)
 from .token import (
     create_access_token,
     create_refresh_token,
@@ -14,6 +23,12 @@ from .token import (
 )
 
 # Create your views here.
+
+
+class RootView(APIView):
+    def get(self, request, *args, **kwargs):
+        data = {"message": "Moneyboxx Auth APIs"}
+        return Response(data)
 
 
 class SendOtp(APIView):
@@ -37,12 +52,12 @@ class SetMpin(APIView):
         token = get_authorization_header(request).decode("utf-8")
 
         if not token:
-            raise AuthenticationFailed("unauthenticated")
+            raise AuthenticationFailed("unauthenticated token not found")
 
         (user_id, is_mpin_set) = decode_temp_token(token)
 
-        if not user_id or not is_mpin_set:
-            raise AuthenticationFailed("unauthenticated")
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
 
         serializer = MpinSerializer(data=request.data)
 
@@ -142,3 +157,73 @@ class RefreshToken(APIView):
             "refresh_token": refresh_token,
         }
         return response
+
+
+class VerifyReferralCode(APIView):
+    def post(self, request):
+        token = get_authorization_header(request).decode("utf-8")
+
+        if not token:
+            raise AuthenticationFailed("unauthenticated token not found")
+
+        (user_id, is_mpin_set) = decode_temp_token(token)
+
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
+
+        current_user = MbxUser.objects.get(pk=user_id)
+
+        serializer = ReferralVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_referral = serializer.validated_data["referral_code"]
+
+        user_with_matching_referral = MbxUser.objects.get(
+            referral_code=validated_referral
+        )
+        if not user_with_matching_referral:
+            return Response(
+                {"Error": "Invalid referral code"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        current_user.refered_by_user_id = user_with_matching_referral.id
+        current_user.save()
+
+        response = Response()
+        response.data = {
+            "message": "success",
+            "current_user": current_user.id,
+            "referred_by": user_with_matching_referral.id,
+            "referral_code": validated_referral,
+        }
+        return response
+
+
+class MbxUserUpdateView(GenericAPIView, UpdateModelMixin):
+    """
+    Can support multiple fields update.
+    Define multiple serializers class and choose based on field applied in future.
+    Currently updates profession field.
+    """
+
+    serializer_class = MbxUserProfessionUpdateSerializer
+
+    def get_object(self):
+        serializer = self.serializer_class(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = get_authorization_header(self.request).decode("utf-8")
+        if not token:
+            raise AuthenticationFailed("unauthenticated token not found")
+
+        (user_id, is_mpin_set) = decode_temp_token(token)
+
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
+
+        return MbxUser.objects.get(pk=user_id)
+
+    def patch(self, request, *args, **kwargs):
+        patch_response_data = self.partial_update(request, *args, **kwargs).data
+        return Response(
+            {"message": "successfully patched profession", "data": patch_response_data}
+        )

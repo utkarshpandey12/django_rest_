@@ -1,7 +1,9 @@
 import random
 import re
+import string
 from datetime import datetime, timezone
 
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
@@ -21,7 +23,8 @@ class OtpSerializer(ModelSerializer):
 
     def create(self, validated_data):
         message_sender = SnsWrapper()
-        code = random.randint(1, 899999) + 100000
+        # code = random.randint(1, 899999) + 100000
+        code = 654321
         try:
             phone_number_record = Otp.objects.get(
                 phone_number=validated_data["phone_number"]
@@ -146,12 +149,23 @@ class OtpVerifySerializer(ModelSerializer):
             country_code=validated_data["country_code"],
             phone_number=validated_data["phone_number"],
         )
+        if is_created:
+            integrity_error = True
+            while integrity_error:
+                user.referral_code = "".join(
+                    random.choices(string.ascii_uppercase + string.digits, k=8)
+                )
+                try:
+                    user.save()
+                    integrity_error = False
+                except IntegrityError:
+                    integrity_error = True
 
         temp_token = create_temp_token(user.id, user.is_mpin_set)
 
         return {
             "message": "success",
-            "data": {"temp_token": temp_token, "is_new_user": user.is_mpin_set},
+            "data": {"temp_token": temp_token, "is_new_user": is_created},
         }
 
 
@@ -179,3 +193,24 @@ class MpinSerializer(ModelSerializer):
         return {
             "mpin": mpin,
         }
+
+
+class ReferralVerifySerializer(serializers.Serializer):
+
+    referral_code = serializers.CharField(max_length=8)
+
+    def validate_referral_code(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Referral code should be of 8 digits!")
+        return value
+
+
+class MbxUserProfessionUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = MbxUser
+        fields = ["profession"]
+
+    def validate(self, validate_data):
+        if not validate_data:
+            raise serializers.ValidationError({"error": "invalid json data"})
+        return validate_data

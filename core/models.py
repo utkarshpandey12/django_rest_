@@ -35,6 +35,12 @@ class Otp(models.Model):
 
 
 class MbxUser(models.Model):
+    profession_choices = [
+        ("Cattle", "cattle_owners"),
+        ("Trading", "traders_desc"),
+        ("Kirana", "kirana_stores"),
+        ("Other", "other_categories"),
+    ]
     country_code = models.CharField(
         max_length=5,
         blank=True,
@@ -66,8 +72,21 @@ class MbxUser(models.Model):
     is_active = models.BooleanField(
         default=False,
         verbose_name="is_User_Active",
-        help_text="is sser currently active",
+        help_text="is user currently active",
     )
+    referral_code = models.CharField(
+        max_length=8,
+        verbose_name="Referral Code",
+        help_text="users referral code",
+        unique=True,
+    )
+    refered_by_user_id = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Refered By",
+        help_text="refered by user_id",
+    )
+    profession = models.CharField(max_length=10, choices=profession_choices, blank=True)
 
     def __str__(self):
         return f"{self.phone_number}"
@@ -100,7 +119,7 @@ class Tokens(models.Model):
         verbose_name="User Token",
         help_text="Users secured token",
     )
-    expiry = models.DateTimeField(
+    expires_at = models.DateTimeField(
         verbose_name="Token Expiry", help_text="Token expiry time"
     )
     created_at = models.DateTimeField(auto_now_add=True)
