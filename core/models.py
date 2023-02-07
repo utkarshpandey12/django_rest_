@@ -35,6 +35,12 @@ class Otp(models.Model):
 
 
 class MbxUser(models.Model):
+    profession_choices = [
+        ("Cattle", "cattle_owners"),
+        ("Trading", "traders_desc"),
+        ("Kirana", "kirana_stores"),
+        ("Other", "other_categories"),
+    ]
     country_code = models.CharField(
         max_length=5,
         blank=True,
@@ -80,6 +86,7 @@ class MbxUser(models.Model):
         verbose_name="Refered By",
         help_text="refered by user_id",
     )
+    profession = models.CharField(max_length=10, choices=profession_choices, blank=True)
 
     def __str__(self):
         return f"{self.phone_number}"

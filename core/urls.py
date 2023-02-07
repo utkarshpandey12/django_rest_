@@ -15,4 +15,9 @@ urlpatterns = [
         view=views.VerifyReferralCode.as_view(),
         name="referral_code_view",
     ),
+    path(
+        "profession/update",
+        views.MbxUserUpdateView.as_view(),
+        name="mbx_user_profession_update",
+    ),
 ]

@@ -2,11 +2,14 @@ from django.contrib.auth.hashers import check_password
 from rest_framework import status
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MbxUser, Tokens
 from .serializers import (
+    MbxUserProfessionUpdateSerializer,
     MpinSerializer,
     OtpSerializer,
     OtpVerifySerializer,
@@ -193,3 +196,34 @@ class VerifyReferralCode(APIView):
             "referral_code": validated_referral,
         }
         return response
+
+
+class MbxUserUpdateView(GenericAPIView, UpdateModelMixin):
+    """
+    Can support multiple fields update.
+    Define multiple serializers class and choose based on field applied in future.
+    Currently updates profession field.
+    """
+
+    serializer_class = MbxUserProfessionUpdateSerializer
+
+    def get_object(self):
+        serializer = self.serializer_class(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = get_authorization_header(self.request).decode("utf-8")
+        if not token:
+            raise AuthenticationFailed("unauthenticated token not found")
+
+        (user_id, is_mpin_set) = decode_temp_token(token)
+
+        if user_id is None:
+            raise AuthenticationFailed("unauthenticated invalid token")
+
+        return MbxUser.objects.get(pk=user_id)
+
+    def patch(self, request, *args, **kwargs):
+        patch_response_data = self.partial_update(request, *args, **kwargs).data
+        return Response(
+            {"message": "successfully patched profession", "data": patch_response_data}
+        )

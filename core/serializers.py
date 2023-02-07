@@ -3,6 +3,7 @@ import re
 import string
 from datetime import datetime, timezone
 
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
@@ -149,15 +150,22 @@ class OtpVerifySerializer(ModelSerializer):
             phone_number=validated_data["phone_number"],
         )
         if is_created:
-            user.referral_code = "".join(
-                random.choices(string.ascii_uppercase + string.digits, k=8)
-            )
-            user.save()
+            integrity_error = True
+            while integrity_error:
+                user.referral_code = "".join(
+                    random.choices(string.ascii_uppercase + string.digits, k=8)
+                )
+                try:
+                    user.save()
+                    integrity_error = False
+                except IntegrityError:
+                    integrity_error = True
+
         temp_token = create_temp_token(user.id, user.is_mpin_set)
 
         return {
             "message": "success",
-            "data": {"temp_token": temp_token, "is_new_user": user.is_mpin_set},
+            "data": {"temp_token": temp_token, "is_new_user": is_created},
         }
 
 
@@ -195,3 +203,14 @@ class ReferralVerifySerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("Referral code should be of 8 digits!")
         return value
+
+
+class MbxUserProfessionUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = MbxUser
+        fields = ["profession"]
+
+    def validate(self, validate_data):
+        if not validate_data:
+            raise serializers.ValidationError({"error": "invalid json data"})
+        return validate_data
