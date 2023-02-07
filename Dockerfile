@@ -66,4 +66,6 @@ ENV USE_DOCKER yes
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
 
+EXPOSE 8000
+
 ENTRYPOINT ["/start"]
