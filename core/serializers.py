@@ -8,7 +8,6 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from .models import MbxUser, Otp
-from .send_otp_sns import SnsWrapper
 from .token import create_temp_token
 
 
@@ -22,7 +21,7 @@ class OtpSerializer(ModelSerializer):
         }
 
     def create(self, validated_data):
-        message_sender = SnsWrapper()
+        # message_sender = SnsWrapper()
         # code = random.randint(1, 899999) + 100000
         code = 654321
         try:
@@ -55,22 +54,11 @@ class OtpSerializer(ModelSerializer):
                 else:
                     phone_number_record.count = phone_number_record.count + 1
 
-                if not message_sender.publish_text_message(
-                    validated_data["country_code"] + validated_data["phone_number"],
-                    str(code),
-                ):
-                    raise serializers.ValidationError({"error": "Unable to send otp"})
-
                 phone_number_record.code = code
                 phone_number_record.save()
                 return {"message": "success"}
 
         except Otp.DoesNotExist:
-            if not message_sender.publish_text_message(
-                validated_data["country_code"] + validated_data["phone_number"],
-                str(code),
-            ):
-                raise serializers.ValidationError({"error": "Unable to send otp"})
             validated_data["code"] = code
             validated_data["count"] = 1
             Otp.objects.create(**validated_data)
