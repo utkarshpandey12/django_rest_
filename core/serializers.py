@@ -3,7 +3,6 @@ import re
 import string
 from datetime import datetime, timezone
 
-from django.core.exceptions import DoesNotExist
 from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -139,7 +138,8 @@ class OtpVerifySerializer(ModelSerializer):
                 country_code=validated_data["country_code"],
                 phone_number=validated_data["phone_number"],
             )
-        except DoesNotExist:
+        except (MbxUser.DoesNotExist, IntegrityError) as error:
+            print(error)
             raise serializers.ValidationError({"error": "user not found/created!"})
 
         if is_created:
