@@ -3,6 +3,7 @@ import re
 import string
 from datetime import datetime, timezone
 
+from django.core.exceptions import DoesNotExist
 from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -133,10 +134,14 @@ class OtpVerifySerializer(ModelSerializer):
         otp_verification_result.count = 0
         otp_verification_result.save()
 
-        user, is_created = MbxUser.objects.get_or_create(
-            country_code=validated_data["country_code"],
-            phone_number=validated_data["phone_number"],
-        )
+        try:
+            user, is_created = MbxUser.objects.get_or_create(
+                country_code=validated_data["country_code"],
+                phone_number=validated_data["phone_number"],
+            )
+        except DoesNotExist:
+            raise serializers.ValidationError({"error": "user not found/created!"})
+
         if is_created:
             integrity_error = True
             while integrity_error:

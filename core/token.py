@@ -1,6 +1,8 @@
 import datetime
+from datetime import timedelta
 
 import jwt
+from django.utils import timezone
 from rest_framework import exceptions
 
 from .models import Tokens
@@ -49,7 +51,7 @@ def decode_access_token(token):
 
 
 def create_refresh_token(**kwargs):
-    expiry_time = datetime.datetime.utcnow() + datetime.timedelta(days=3)
+    expiry_time = timezone.now() + timedelta(days=3)
     refresh_token = jwt.encode(
         {
             "user_id": [
