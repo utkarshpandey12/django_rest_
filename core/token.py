@@ -45,7 +45,7 @@ def decode_access_token(token):
         payload = jwt.decode(token, "access_token_secret", algorithms="HS256")
         return payload["user_id"]
     except Exception:
-        raise exceptions.AuthenticationFailed("unauthenticated")
+        raise exceptions.AuthenticationFailed("unauthenticated, invalid access token!")
 
 
 def create_refresh_token(**kwargs):
@@ -86,4 +86,4 @@ def decode_refresh_token(token):
         payload = jwt.decode(token, "refresh_token_secret", algorithms="HS256")
         return (payload["user_id"], payload["exp"])
     except Exception:
-        raise exceptions.AuthenticationFailed("unauthenticated")
+        raise exceptions.AuthenticationFailed("unauthenticated, invalid refresh token!")
