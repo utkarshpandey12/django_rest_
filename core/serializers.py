@@ -138,8 +138,7 @@ class OtpVerifySerializer(ModelSerializer):
                 country_code=validated_data["country_code"],
                 phone_number=validated_data["phone_number"],
             )
-        except (MbxUser.DoesNotExist, IntegrityError) as error:
-            print(error)
+        except (MbxUser.DoesNotExist, IntegrityError):
             raise serializers.ValidationError({"error": "user not found/created!"})
 
         if is_created:

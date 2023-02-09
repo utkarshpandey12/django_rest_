@@ -1,5 +1,4 @@
 from django.contrib.auth.hashers import check_password
-from rest_framework import status
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import APIException, AuthenticationFailed
 from rest_framework.generics import GenericAPIView
@@ -65,7 +64,10 @@ class SetMpin(APIView):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        user = MbxUser.objects.get(pk=user_id)
+        try:
+            user = MbxUser.objects.get(pk=user_id)
+        except MbxUser.DoesNotExist:
+            raise APIException("User does not exist!")
 
         if user.is_mpin_set or user.mpin:
             raise APIException("Mpin already set.")
@@ -102,19 +104,17 @@ class VerifyMpin(APIView):
 
         if not request.COOKIES.get("refresh_token") and token:
             (user_id, is_mpin_set) = decode_temp_token(token)
-            if (
-                token
-                and user_id
-                and not request.COOKIES.get("refresh_token")
-                and not is_mpin_set
-            ):
+            if token and user_id and not is_mpin_set:
                 raise AuthenticationFailed("unauthenticated, invalid temp token!")
 
         serializer = MpinSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        user_obj = MbxUser.objects.get(pk=user_id)
+        try:
+            user_obj = MbxUser.objects.get(pk=user_id)
+        except MbxUser.DoesNotExist:
+            raise APIException("User does not exist!")
 
         if not check_password(validated_data["mpin"], user_obj.mpin):
             raise AuthenticationFailed("Invalid Mpin")
@@ -136,17 +136,19 @@ class RefreshToken(APIView):
     def post(self, request):
 
         if not request.COOKIES.get("refresh_token"):
-            raise AuthenticationFailed("unauthenticated")
+            raise AuthenticationFailed("unauthenticated, cookie not found!")
 
         refresh_token = request.COOKIES.get("refresh_token")
         (user_id, expiry_time) = decode_refresh_token(
             request.COOKIES.get("refresh_token")
         )
 
-        token_obj = Tokens.objects.get(user_id=user_id, token=refresh_token)
-
-        if not token_obj:
-            raise AuthenticationFailed("unauthenticated")
+        try:
+            token_obj = Tokens.objects.get(user_id=user_id, token=refresh_token)
+        except Tokens.DoesNotExist:
+            raise APIException(
+                "no matching token_obj found, please try with valid cookie!"
+            )
 
         access_token = create_access_token(user_id, token_obj.user_id.phone_number)
 
@@ -176,22 +178,21 @@ class VerifyReferralCode(APIView):
 
         user_id = decode_access_token(token)
 
-        if user_id is None:
-            raise AuthenticationFailed("unauthenticated invalid token")
-
-        current_user = MbxUser.objects.get(pk=user_id)
+        try:
+            current_user = MbxUser.objects.get(pk=user_id)
+        except MbxUser.DoesNotExist:
+            raise APIException("No matching user found!")
 
         serializer = ReferralVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_referral = serializer.validated_data["referral_code"]
 
-        user_with_matching_referral = MbxUser.objects.get(
-            referral_code=validated_referral
-        )
-        if not user_with_matching_referral:
-            return Response(
-                {"Error": "Invalid referral code"}, status=status.HTTP_404_NOT_FOUND
+        try:
+            user_with_matching_referral = MbxUser.objects.get(
+                referral_code=validated_referral
             )
+        except MbxUser.DoesNotExist:
+            raise APIException("Invalid referral code!")
 
         current_user.refered_by_user_id = user_with_matching_referral.id
         current_user.save()
@@ -225,8 +226,6 @@ class MbxUserUpdateView(GenericAPIView, UpdateModelMixin):
             raise AuthenticationFailed("unauthenticated access token not found")
 
         user_id = decode_access_token(token)
-        if user_id is None:
-            raise AuthenticationFailed("unauthenticated invalid token")
 
         serializer = self.serializer_class(data=self.request.data)
         serializer.is_valid(raise_exception=True)
