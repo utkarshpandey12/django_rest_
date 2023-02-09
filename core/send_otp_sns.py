@@ -1,3 +1,4 @@
+'''
 import boto3
 import botocore
 
@@ -43,3 +44,33 @@ class SnsWrapper:
             return None
         else:
             return message_id
+'''
+
+from twilio.rest import Client
+
+from config.settings.base import (
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_HEX_CODE,
+    TWILIO_M_SERVICE_SID,
+)
+
+
+def sendSms(mobileNumber, otp):
+    account_sid = TWILIO_ACCOUNT_SID
+    auth_token = TWILIO_AUTH_TOKEN
+    client = Client(account_sid, auth_token)
+
+    try:
+        client.messages.create(
+            messaging_service_sid=TWILIO_M_SERVICE_SID,
+            body="#"
+            + otp
+            + " is your Moneyboxx verification OTP."
+            + "\n"
+            + TWILIO_HEX_CODE,
+            to=mobileNumber,
+        )
+        return True
+    except Exception:
+        return False
